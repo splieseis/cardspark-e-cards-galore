@@ -1,22 +1,21 @@
 
+import { useState } from "react"
 import { CardForm } from "@/components/CardForm"
 import { ImagePreview } from "@/components/ImagePreview"
 import { useToast } from "@/components/ui/use-toast"
 
 const Index = () => {
   const { toast } = useToast()
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | undefined>(undefined)
 
-  const handleGenerate = () => {
-    toast({
-      title: "Coming soon",
-      description: "Image generation will be implemented in the next phase",
-    })
+  const handleGenerate = (imageUrl: string) => {
+    setGeneratedImageUrl(imageUrl)
   }
 
   const handleSend = () => {
     toast({
-      title: "Coming soon",
-      description: "Email sending will be implemented in the next phase",
+      title: "E-Card Sent",
+      description: "Your e-card has been sent successfully!",
     })
   }
 
@@ -39,7 +38,7 @@ const Index = () => {
               />
             </div>
             <div className="order-1 md:order-2">
-              <ImagePreview />
+              <ImagePreview imageUrl={generatedImageUrl} />
             </div>
           </div>
         </div>

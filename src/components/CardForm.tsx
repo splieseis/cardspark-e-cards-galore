@@ -1,3 +1,4 @@
+
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -9,7 +10,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { uploadEcardImage } from "@/utils/storage"
 
 interface CardFormProps {
-  onGenerate: () => void;
+  onGenerate: (imageUrl: string) => void;
   onSend: () => void;
 }
 
@@ -21,6 +22,7 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
     recipientEmail: ''
   })
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [isGenerating, setIsGenerating] = useState(false)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -33,6 +35,48 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedImage(e.target.files[0])
+    }
+  }
+
+  const generateImage = async () => {
+    if (!formData.imagePrompt) {
+      toast({
+        title: "Input required",
+        description: "Please enter a description for your image",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setIsGenerating(true)
+      
+      const { data, error } = await supabase.functions.invoke('generate-image', {
+        body: { prompt: formData.imagePrompt },
+      })
+
+      if (error) {
+        throw error
+      }
+
+      if (data.imageUrl) {
+        onGenerate(data.imageUrl)
+        toast({
+          title: "Success",
+          description: "Your image has been generated!",
+        })
+      } else {
+        throw new Error('No image URL returned')
+      }
+    } catch (error) {
+      console.error('Error generating image:', error)
+      toast({
+        title: "Generation failed",
+        description: "Failed to generate image. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsGenerating(false)
     }
   }
 
@@ -95,6 +139,20 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
         </div>
 
         <div className="space-y-2">
+          <div className="flex items-center space-x-2">
+            <Wand2 className="w-4 h-4 text-gray-500" />
+            <span className="text-sm font-medium text-gray-700">Or Generate Image</span>
+          </div>
+          <Input
+            name="imagePrompt"
+            value={formData.imagePrompt}
+            onChange={handleInputChange}
+            placeholder="Describe the image you want to generate..."
+            className="w-full"
+          />
+        </div>
+
+        <div className="space-y-2">
           <span className="text-sm font-medium text-gray-700">Personal Message</span>
           <Textarea
             name="message"
@@ -122,11 +180,12 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
 
         <div className="flex flex-col sm:flex-row gap-3">
           <Button 
-            onClick={onGenerate}
+            onClick={generateImage}
+            disabled={isGenerating}
             className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
           >
             <Wand2 className="w-4 h-4 mr-2" />
-            Generate Image
+            {isGenerating ? 'Generating...' : 'Generate Image'}
           </Button>
           <Button 
             onClick={handleSubmit}

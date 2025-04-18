@@ -1,9 +1,12 @@
 
+import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Image, Mail, Wand2 } from "lucide-react"
+import { supabase } from "@/integrations/supabase/client"
+import { useToast } from "@/components/ui/use-toast"
 
 interface CardFormProps {
   onGenerate: () => void;
@@ -11,6 +14,45 @@ interface CardFormProps {
 }
 
 export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
+  const { toast } = useToast()
+  const [formData, setFormData] = useState({
+    imagePrompt: '',
+    message: '',
+    recipientEmail: ''
+  })
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  const handleSubmit = async () => {
+    try {
+      const { error } = await supabase
+        .from('ecards')
+        .insert({
+          message: formData.message,
+          recipient_email: formData.recipientEmail,
+        })
+
+      if (error) throw error
+
+      toast({
+        title: "Success!",
+        description: "Your e-card has been saved.",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save your e-card. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
   return (
     <Card className="w-full max-w-md mx-auto bg-white/50 backdrop-blur-sm border border-gray-200 shadow-lg">
       <CardContent className="space-y-6 pt-6">
@@ -20,6 +62,9 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
             <span className="text-sm font-medium text-gray-700">Image Prompt</span>
           </div>
           <Input
+            name="imagePrompt"
+            value={formData.imagePrompt}
+            onChange={handleInputChange}
             placeholder="Describe the image you want (e.g., 'A cat in space')"
             className="w-full"
           />
@@ -28,6 +73,9 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
         <div className="space-y-2">
           <span className="text-sm font-medium text-gray-700">Personal Message</span>
           <Textarea
+            name="message"
+            value={formData.message}
+            onChange={handleInputChange}
             placeholder="Write your personal message here..."
             className="min-h-[120px]"
           />
@@ -39,6 +87,9 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
             <span className="text-sm font-medium text-gray-700">Recipient's Email</span>
           </div>
           <Input
+            name="recipientEmail"
+            value={formData.recipientEmail}
+            onChange={handleInputChange}
             type="email"
             placeholder="recipient@example.com"
             className="w-full"
@@ -54,7 +105,7 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
             Generate Image
           </Button>
           <Button 
-            onClick={onSend}
+            onClick={handleSubmit}
             className="flex-1 bg-sky-500 hover:bg-sky-600 text-white"
           >
             <Mail className="w-4 h-4 mr-2" />

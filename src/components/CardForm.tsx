@@ -19,11 +19,14 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
   const [formData, setFormData] = useState({
     imagePrompt: '',
     message: '',
-    recipientEmail: ''
+    recipientEmail: '',
+    senderEmail: ''
   })
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const [isSending, setIsSending] = useState(false)
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -36,6 +39,7 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedImage(e.target.files[0])
+      setCurrentImageUrl(null) // Reset generated image URL when uploading a new one
     }
   }
 
@@ -69,6 +73,7 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
           const uploadedUrl = await uploadEcardImage(data.imageUrl)
           
           if (uploadedUrl) {
+            setCurrentImageUrl(uploadedUrl)
             onGenerate(uploadedUrl)
             toast({
               title: "Success",
@@ -103,37 +108,55 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
   }
 
   const handleSubmit = async () => {
+    if (!formData.recipientEmail) {
+      toast({
+        title: "Email required",
+        description: "Please enter recipient's email address",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSending(true)
+
     try {
-      let imageUrl = null
+      let imageUrl = currentImageUrl
       
-      if (selectedImage) {
+      if (selectedImage && !currentImageUrl) {
         imageUrl = await uploadEcardImage(selectedImage)
-        if (!imageUrl) {
-          throw new Error('Failed to upload image')
-        }
+        setCurrentImageUrl(imageUrl)
       }
 
       // Save to database
-      const { error } = await supabase
+      const { error: dbError } = await supabase
         .from('ecards')
         .insert({
           message: formData.message,
           recipient_email: formData.recipientEmail,
+          sender_email: formData.senderEmail || null,
           image_url: imageUrl
         })
 
-      if (error) throw error
+      if (dbError) throw dbError
+
+      console.log("Sending email with imageUrl:", imageUrl)
 
       // Send email
-      const emailResponse = await supabase.functions.invoke('send-ecard', {
+      const { data: emailData, error: emailError } = await supabase.functions.invoke('send-ecard', {
         body: {
           recipientEmail: formData.recipientEmail,
           message: formData.message,
-          imageUrl,
+          imageUrl: imageUrl,
+          senderEmail: formData.senderEmail || undefined,
         },
       })
 
-      if (emailResponse.error) throw emailResponse.error
+      if (emailError) {
+        console.error("Email error details:", emailError)
+        throw emailError
+      }
+
+      console.log("Email response:", emailData)
 
       toast({
         title: "Success!",
@@ -143,9 +166,11 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
       setFormData({
         imagePrompt: '',
         message: '',
-        recipientEmail: ''
+        recipientEmail: '',
+        senderEmail: ''
       })
       setSelectedImage(null)
+      setCurrentImageUrl(null)
       
       onSend()
     } catch (error) {
@@ -155,6 +180,8 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
         description: "Failed to send your e-card. Please try again.",
         variant: "destructive",
       })
+    } finally {
+      setIsSending(false)
     }
   }
 
@@ -214,6 +241,21 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
           />
         </div>
 
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2">
+            <Mail className="w-4 h-4 text-gray-500" />
+            <span className="text-sm font-medium text-gray-700">Your Email (optional)</span>
+          </div>
+          <Input
+            name="senderEmail"
+            value={formData.senderEmail}
+            onChange={handleInputChange}
+            type="email"
+            placeholder="your@email.com"
+            className="w-full"
+          />
+        </div>
+
         <div className="flex flex-col sm:flex-row gap-3">
           <Button 
             onClick={generateImage}
@@ -225,10 +267,11 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
           </Button>
           <Button 
             onClick={handleSubmit}
+            disabled={isSending}
             className="flex-1 bg-sky-500 hover:bg-sky-600 text-white"
           >
             <Mail className="w-4 h-4 mr-2" />
-            Send E-Card
+            {isSending ? 'Sending...' : 'Send E-Card'}
           </Button>
         </div>
       </CardContent>

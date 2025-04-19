@@ -10,6 +10,7 @@ const resend = new Resend(Deno.env.get("RESEND_API_KEY"))
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
 interface SendECardRequest {
@@ -22,11 +23,21 @@ interface SendECardRequest {
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { 
+      status: 204, 
+      headers: corsHeaders 
+    })
   }
 
   try {
     const { recipientEmail, message, imageUrl, senderEmail }: SendECardRequest = await req.json()
+    
+    console.log("Received request with data:", {
+      recipientEmail,
+      message: message?.substring(0, 50) + "...", // Log part of message for privacy
+      imageUrl: imageUrl || "No image URL provided",
+      senderEmail: senderEmail || "No sender email provided"
+    })
 
     const html = await renderAsync(
       React.createElement(ECardEmail, {

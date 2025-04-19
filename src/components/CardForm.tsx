@@ -1,3 +1,4 @@
+
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -112,6 +113,7 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
         }
       }
 
+      // Save to database
       const { error } = await supabase
         .from('ecards')
         .insert({
@@ -122,9 +124,20 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
 
       if (error) throw error
 
+      // Send email
+      const emailResponse = await supabase.functions.invoke('send-ecard', {
+        body: {
+          recipientEmail: formData.recipientEmail,
+          message: formData.message,
+          imageUrl,
+        },
+      })
+
+      if (emailResponse.error) throw emailResponse.error
+
       toast({
         title: "Success!",
-        description: "Your e-card has been saved.",
+        description: "Your e-card has been sent.",
       })
 
       setFormData({
@@ -136,9 +149,10 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
       
       onSend()
     } catch (error) {
+      console.error('Error sending e-card:', error)
       toast({
         title: "Error",
-        description: "Failed to save your e-card. Please try again.",
+        description: "Failed to send your e-card. Please try again.",
         variant: "destructive",
       })
     }

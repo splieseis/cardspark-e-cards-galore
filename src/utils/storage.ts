@@ -1,15 +1,34 @@
 
 import { supabase } from "@/integrations/supabase/client"
 
-export const uploadEcardImage = async (file: File): Promise<string | null> => {
+export const uploadEcardImage = async (file: File | string): Promise<string | null> => {
   try {
     const timestamp = new Date().getTime()
-    const fileExt = file.name.split('.').pop()
+    let uploadedFile: File;
+    
+    // If the input is a URL string, fetch the image and convert to File
+    if (typeof file === 'string') {
+      try {
+        const response = await fetch(file);
+        if (!response.ok) throw new Error('Failed to fetch image from URL');
+        
+        const blob = await response.blob();
+        uploadedFile = new File([blob], `ecard-${timestamp}.png`, { type: blob.type });
+      } catch (error) {
+        console.error('Error converting URL to File:', error);
+        throw error;
+      }
+    } else {
+      // If it's already a File, use it directly
+      uploadedFile = file;
+    }
+
+    const fileExt = uploadedFile.name.split('.').pop()
     const fileName = `ecard-${timestamp}.${fileExt}`
 
     const { data, error } = await supabase.storage
       .from('ecards')
-      .upload(fileName, file)
+      .upload(fileName, uploadedFile)
 
     if (error) {
       console.error('Error uploading file:', error.message)

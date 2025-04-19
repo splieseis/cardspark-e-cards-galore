@@ -1,4 +1,3 @@
-
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -23,6 +22,7 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
   })
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -61,10 +61,31 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
 
       if (data.imageUrl) {
         onGenerate(data.imageUrl)
-        toast({
-          title: "Success",
-          description: "Your image has been generated!",
-        })
+        
+        try {
+          setIsUploading(true)
+          
+          const uploadedUrl = await uploadEcardImage(data.imageUrl)
+          
+          if (uploadedUrl) {
+            onGenerate(uploadedUrl)
+            toast({
+              title: "Success",
+              description: "Your image has been generated and saved!",
+            })
+          } else {
+            throw new Error('Failed to upload image to storage')
+          }
+        } catch (uploadError) {
+          console.error('Error uploading generated image:', uploadError)
+          toast({
+            title: "Upload failed",
+            description: "Your image was generated but couldn't be saved. You can still use it.",
+            variant: "destructive",
+          })
+        } finally {
+          setIsUploading(false)
+        }
       } else {
         throw new Error('No image URL returned')
       }
@@ -106,13 +127,14 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
         description: "Your e-card has been saved.",
       })
 
-      // Reset form
       setFormData({
         imagePrompt: '',
         message: '',
         recipientEmail: ''
       })
       setSelectedImage(null)
+      
+      onSend()
     } catch (error) {
       toast({
         title: "Error",
@@ -181,11 +203,11 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
         <div className="flex flex-col sm:flex-row gap-3">
           <Button 
             onClick={generateImage}
-            disabled={isGenerating}
+            disabled={isGenerating || isUploading}
             className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
           >
             <Wand2 className="w-4 h-4 mr-2" />
-            {isGenerating ? 'Generating...' : 'Generate Image'}
+            {isGenerating ? 'Generating...' : isUploading ? 'Uploading...' : 'Generate Image'}
           </Button>
           <Button 
             onClick={handleSubmit}

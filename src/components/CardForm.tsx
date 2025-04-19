@@ -1,13 +1,13 @@
-
 import { useState } from "react"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Image, Mail, Wand2 } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
 import { uploadEcardImage } from "@/utils/storage"
+import { ImageUploader } from "./card/ImageUploader"
+import { ImageGenerator } from "./card/ImageGenerator"
+import { MessageInput } from "./card/MessageInput"
+import { RecipientInput } from "./card/RecipientInput"
+import { SendButton } from "./card/SendButton"
 
 interface CardFormProps {
   onGenerate: (imageUrl: string) => void;
@@ -38,7 +38,7 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedImage(e.target.files[0])
-      setCurrentImageUrl(null) // Reset generated image URL when uploading a new one
+      setCurrentImageUrl(null)
     }
   }
 
@@ -126,7 +126,6 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
         setCurrentImageUrl(imageUrl)
       }
 
-      // Save to database
       const { error: dbError } = await supabase
         .from('ecards')
         .insert({
@@ -139,7 +138,6 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
 
       console.log("Sending email with imageUrl:", imageUrl)
 
-      // Send email
       const { data: emailData, error: emailError } = await supabase.functions.invoke('send-ecard', {
         body: {
           recipientEmail: formData.recipientEmail,
@@ -184,77 +182,30 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
   return (
     <Card className="w-full max-w-md mx-auto bg-white/50 backdrop-blur-sm border border-gray-200 shadow-lg">
       <CardContent className="space-y-6 pt-6">
-        <div className="space-y-2">
-          <div className="flex items-center space-x-2">
-            <Image className="w-4 h-4 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">Upload Image</span>
-          </div>
-          <Input
-            type="file"
-            accept="image/*"
-            onChange={handleImageSelect}
-            className="w-full"
-          />
-        </div>
+        <ImageUploader onImageSelect={handleImageSelect} />
+        
+        <ImageGenerator
+          imagePrompt={formData.imagePrompt}
+          onImagePromptChange={handleInputChange}
+          onGenerate={generateImage}
+          isGenerating={isGenerating}
+          isUploading={isUploading}
+        />
 
-        <div className="space-y-2">
-          <div className="flex items-center space-x-2">
-            <Wand2 className="w-4 h-4 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">Or Generate Image</span>
-          </div>
-          <Input
-            name="imagePrompt"
-            value={formData.imagePrompt}
-            onChange={handleInputChange}
-            placeholder="Describe the image you want to generate..."
-            className="w-full"
-          />
-        </div>
+        <MessageInput
+          message={formData.message}
+          onChange={handleInputChange}
+        />
 
-        <div className="space-y-2">
-          <span className="text-sm font-medium text-gray-700">Personal Message</span>
-          <Textarea
-            name="message"
-            value={formData.message}
-            onChange={handleInputChange}
-            placeholder="Write your personal message here..."
-            className="min-h-[120px]"
-          />
-        </div>
+        <RecipientInput
+          recipientEmail={formData.recipientEmail}
+          onChange={handleInputChange}
+        />
 
-        <div className="space-y-2">
-          <div className="flex items-center space-x-2">
-            <Mail className="w-4 h-4 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">Recipient's Email</span>
-          </div>
-          <Input
-            name="recipientEmail"
-            value={formData.recipientEmail}
-            onChange={handleInputChange}
-            type="email"
-            placeholder="recipient@example.com"
-            className="w-full"
-          />
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Button 
-            onClick={generateImage}
-            disabled={isGenerating || isUploading}
-            className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
-          >
-            <Wand2 className="w-4 h-4 mr-2" />
-            {isGenerating ? 'Generating...' : isUploading ? 'Uploading...' : 'Generate Image'}
-          </Button>
-          <Button 
-            onClick={handleSubmit}
-            disabled={isSending}
-            className="flex-1 bg-sky-500 hover:bg-sky-600 text-white"
-          >
-            <Mail className="w-4 h-4 mr-2" />
-            {isSending ? 'Sending...' : 'Send E-Card'}
-          </Button>
-        </div>
+        <SendButton
+          onClick={handleSubmit}
+          isSending={isSending}
+        />
       </CardContent>
     </Card>
   )

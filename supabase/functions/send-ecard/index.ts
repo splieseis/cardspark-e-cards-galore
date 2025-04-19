@@ -1,9 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import { Resend } from "npm:resend@2.0.0"
-import React from 'npm:react@18.3.1'
-import { renderAsync } from 'npm:@react-email/components@0.0.22'
-import { ECardEmail } from "./_templates/ecard.tsx"
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"))
 
@@ -17,6 +14,7 @@ interface SendECardRequest {
   recipientEmail: string
   message: string
   imageUrl: string
+  emailHtml: string
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -29,26 +27,24 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { recipientEmail, message, imageUrl }: SendECardRequest = await req.json()
+    const { recipientEmail, message, imageUrl, emailHtml }: SendECardRequest = await req.json()
     
     console.log("Received request with data:", {
       recipientEmail,
       message: message?.substring(0, 50) + "...", // Log part of message for privacy
-      imageUrl: imageUrl || "No image URL provided"
+      imageUrl: imageUrl || "No image URL provided",
+      emailHtml: emailHtml ? "HTML content received" : "No HTML content"
     })
 
-    const html = await renderAsync(
-      React.createElement(ECardEmail, {
-        message,
-        imageUrl
-      })
-    )
+    if (!emailHtml) {
+      throw new Error("Email HTML content is required")
+    }
 
     const emailResponse = await resend.emails.send({
       from: "E-Cards <onboarding@resend.dev>",
       to: [recipientEmail],
       subject: "You've received an e-card! 🎉",
-      html,
+      html: emailHtml,
     })
 
     console.log("Email sent successfully:", emailResponse)

@@ -1,8 +1,10 @@
+
 import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
 import { uploadEcardImage } from "@/utils/storage"
+import { generateECardEmailHtml } from "@/utils/emailTemplate"
 import { ImageUploader } from "./card/ImageUploader"
 import { ImageGenerator } from "./card/ImageGenerator"
 import { MessageInput } from "./card/MessageInput"
@@ -116,6 +118,15 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
       return
     }
 
+    if (!currentImageUrl && !selectedImage) {
+      toast({
+        title: "Image required",
+        description: "Please upload or generate an image for your e-card",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsSending(true)
 
     try {
@@ -125,6 +136,9 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
         imageUrl = await uploadEcardImage(selectedImage)
         setCurrentImageUrl(imageUrl)
       }
+
+      // Generate email HTML
+      const emailHtml = generateECardEmailHtml(formData.message, imageUrl!)
 
       const { error: dbError } = await supabase
         .from('ecards')
@@ -142,7 +156,8 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
         body: {
           recipientEmail: formData.recipientEmail,
           message: formData.message,
-          imageUrl: imageUrl
+          imageUrl: imageUrl,
+          emailHtml: emailHtml
         },
       })
 

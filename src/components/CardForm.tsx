@@ -19,8 +19,7 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
   const [formData, setFormData] = useState({
     imagePrompt: '',
     message: '',
-    recipientEmail: '',
-    senderEmail: ''
+    recipientEmail: ''
   })
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -133,7 +132,6 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
         .insert({
           message: formData.message,
           recipient_email: formData.recipientEmail,
-          sender_email: formData.senderEmail || null,
           image_url: imageUrl
         })
 
@@ -146,8 +144,7 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
         body: {
           recipientEmail: formData.recipientEmail,
           message: formData.message,
-          imageUrl: imageUrl,
-          senderEmail: formData.senderEmail || undefined,
+          imageUrl: imageUrl
         },
       })
 
@@ -166,8 +163,7 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
       setFormData({
         imagePrompt: '',
         message: '',
-        recipientEmail: '',
-        senderEmail: ''
+        recipientEmail: ''
       })
       setSelectedImage(null)
       setCurrentImageUrl(null)
@@ -237,21 +233,6 @@ export const CardForm = ({ onGenerate, onSend }: CardFormProps) => {
             onChange={handleInputChange}
             type="email"
             placeholder="recipient@example.com"
-            className="w-full"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center space-x-2">
-            <Mail className="w-4 h-4 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">Your Email (optional)</span>
-          </div>
-          <Input
-            name="senderEmail"
-            value={formData.senderEmail}
-            onChange={handleInputChange}
-            type="email"
-            placeholder="your@email.com"
             className="w-full"
           />
         </div>

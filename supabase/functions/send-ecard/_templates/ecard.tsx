@@ -1,4 +1,3 @@
-
 import {
   Body,
   Container,
@@ -16,13 +15,11 @@ import * as React from 'npm:react@18.3.1'
 interface ECardEmailProps {
   message: string
   imageUrl: string
-  senderEmail?: string
 }
 
 export const ECardEmail = ({
   message,
   imageUrl,
-  senderEmail,
 }: ECardEmailProps) => (
   <Html>
     <Head />
@@ -30,9 +27,6 @@ export const ECardEmail = ({
     <Body style={main}>
       <Container style={container}>
         <Heading style={h1}>You've received an e-card!</Heading>
-        {senderEmail && (
-          <Text style={text}>From: {senderEmail}</Text>
-        )}
         <Section style={imageContainer}>
           <Image
             src={imageUrl}

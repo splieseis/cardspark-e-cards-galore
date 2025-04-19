@@ -17,7 +17,6 @@ interface SendECardRequest {
   recipientEmail: string
   message: string
   imageUrl: string
-  senderEmail?: string
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -30,20 +29,18 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { recipientEmail, message, imageUrl, senderEmail }: SendECardRequest = await req.json()
+    const { recipientEmail, message, imageUrl }: SendECardRequest = await req.json()
     
     console.log("Received request with data:", {
       recipientEmail,
       message: message?.substring(0, 50) + "...", // Log part of message for privacy
-      imageUrl: imageUrl || "No image URL provided",
-      senderEmail: senderEmail || "No sender email provided"
+      imageUrl: imageUrl || "No image URL provided"
     })
 
     const html = await renderAsync(
       React.createElement(ECardEmail, {
         message,
-        imageUrl,
-        senderEmail,
+        imageUrl
       })
     )
 
